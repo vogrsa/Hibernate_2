@@ -2,10 +2,8 @@ package com.javarush;
 
 import com.javarush.dao.*;
 import com.javarush.domain.*;
-import com.mysql.cj.protocol.x.Notice;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
 
@@ -40,9 +38,9 @@ public class Main {
         properties.put(Environment.URL, "jdbc:p6spy:mysql://localhost:3306/movie");
         properties.put(Environment.USER, "root");
         properties.put(Environment.PASS, "shfW/root25SQL234");
-        properties.put(Environment.SHOW_SQL, "true");
-        properties.put(Environment.HBM2DDL_AUTO, "validate");
         properties.put(Environment.CURRENT_SESSION_CONTEXT_CLASS, "thread");
+        properties.put(Environment.HBM2DDL_AUTO, "validate");
+//        properties.put(Environment.SHOW_SQL, "true");
 
         sessionFactory = new Configuration()
                 .addAnnotatedClass(Actor.class)
@@ -82,8 +80,62 @@ public class Main {
 
     public static void main(String[] args) {
         Main main = new Main();
+        Customer customer = main.createCustomer();
+        //main.customerReturnInventoryToStore();
+        main.customerRentalInventory(customer);
+
     }
 
+    private void customerRentalInventory(Customer customer) {
+        try(Session session = sessionFactory.openSession()) {
+            session.beginTransaction();
+            Film film = filmDao.getAnyFilmForRent();
+            Store store = storeDao.getItems(0, 1).get(0);
+
+            Inventory inventory = new Inventory();
+            inventory.setFilm(film);
+            inventory.setStore(store);
+            session.getTransaction().commit();
+        }
+    }
+
+    private void customerReturnInventoryToStore() {
+        try(Session session = sessionFactory.getCurrentSession()) {
+            session.beginTransaction();
+            Rental rental = rentalDao.getAnyUnreternedRental();
+            rental.setReturnDate(LocalDateTime.now());
+            rentalDao.save(rental);
+            session.getTransaction().commit();
+        }
+    }
+
+    private Customer createCustomer() {
+        try(Session session = sessionFactory.getCurrentSession()) {
+            session.beginTransaction();
+
+            Store store = storeDao.getItems(0, 1).get(0);
+            City city = cityDao.getByName("Araatuba");
+
+            Address address = new Address();
+            address.setAddress(" Frunze str., 1");
+            address.setPhone("495-796-8538");
+            address.setCity(city);
+            address.setDistrict("New Podlipki");
+            addressDao.save(address);
+
+            Customer customer = new Customer();
+            customer.setActive(true);
+            customer.setAddress(address);
+            customer.setEmail("test@gmail.com");
+            customer.setStore(store);
+            customer.setFirstName("Vitya");
+            customer.setLastName("Jezlov");
+            customerDao.save(customer);
+
+            session.getTransaction().commit();
+            return customer;
+        }
+    }
 
 
 }
